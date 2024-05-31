@@ -2,6 +2,7 @@
 
 use App\Models\Tweet;
 use App\Models\User;
+use Dotenv\Exception\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Hash;
@@ -53,6 +54,29 @@ Route::get('/users/{user}/tweets', function (User $user) {
     return $user->tweets()->with('user:id,name,username,avatar')->latest()->paginate(10);
 });
 
+Route::post('/login', function (Request $request) {
+    $request->validate([
+        'email' => 'required|email',
+        'password' => 'required',
+        'device_name' => 'required',
+    ]);
+
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user || !Hash::check($request->password, $user->password)) {
+        throw ValidationException::withMessages([
+            'email' => ['The provided credentials are incorrect.'],
+        ]);
+    }
+
+    $token = $user->createToken($request->device_name)->plainTextToken;
+
+    return response()->json([
+        'token' => $token,
+        'user' => $user->only('id', 'name', 'username', 'email', 'avatar'),
+    ], 201);
+});
+
 Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
     $request->user()->currentAccessToken()->delete();
 
@@ -77,4 +101,20 @@ Route::post('/register', function (Request $request) {
     $user->follows()->attach($user);
 
     return response()->json($user, 201);
+});
+
+Route::middleware('auth:sanctum')->post('/follow/{user}', function (User $user) {
+    auth()->user()->follow($user);
+
+    return response()->json('Followed', 201);
+});
+
+Route::middleware('auth:sanctum')->post('/unfollow/{user}', function (User $user) {
+    auth()->user()->unfollow($user);
+
+    return response()->json('Unfollowed', 201);
+});
+
+Route::middleware('auth:sanctum')->get('/is_following/{user}', function (User $user) {
+    return response()->json(auth()->user()->isFollowing($user), 200);
 });
