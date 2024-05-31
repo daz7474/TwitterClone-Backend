@@ -33,7 +33,5 @@ class DatabaseSeeder extends Seeder
                     ->attach(User::find($user_id2));
             }
         }
-
-        Tweet::factory(40)->create();
     }
 }
