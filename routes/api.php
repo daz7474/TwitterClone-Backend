@@ -2,14 +2,14 @@
 
 use App\Models\Tweet;
 use App\Models\User;
-use Dotenv\Exception\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
-Route::get('/user', function (Request $request) {
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+});
 
 Route::get('/tweets_all', function () {
     return Tweet::with('user:id,name,username,avatar')->latest()->paginate(10);
@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->delete('/tweets/{tweet}', function (Tweet $tw
     return response()->json($tweet->delete(), 200);
 });
 
+// User Profile
 Route::get('/users/{user}', function (User $user) {
     return $user->only(
         'id',
@@ -56,10 +57,12 @@ Route::get('/users/{user}', function (User $user) {
     );
 });
 
+// Users Tweets
 Route::get('/users/{user}/tweets', function (User $user) {
     return $user->tweets()->with('user:id,name,username,avatar')->latest()->paginate(10);
 });
 
+// Login
 Route::post('/login', function (Request $request) {
     $request->validate([
         'email' => 'required|email',
@@ -83,12 +86,14 @@ Route::post('/login', function (Request $request) {
     ], 201);
 });
 
+// Logout
 Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
     $request->user()->currentAccessToken()->delete();
 
     return response()->json('Logged out', 200);
 });
 
+// Register
 Route::post('/register', function (Request $request) {
     $request->validate([
         'name' => 'required',
@@ -109,18 +114,21 @@ Route::post('/register', function (Request $request) {
     return response()->json($user, 201);
 });
 
+// Follow
 Route::middleware('auth:sanctum')->post('/follow/{user}', function (User $user) {
     auth()->user()->follow($user);
 
     return response()->json('Followed', 201);
 });
 
+// Unfollow
 Route::middleware('auth:sanctum')->post('/unfollow/{user}', function (User $user) {
     auth()->user()->unfollow($user);
 
     return response()->json('Unfollowed', 201);
 });
 
+// IsFollowing
 Route::middleware('auth:sanctum')->get('/is_following/{user}', function (User $user) {
     return response()->json(auth()->user()->isFollowing($user), 200);
 });
